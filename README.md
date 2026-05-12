@@ -218,7 +218,7 @@ cp strain_gauge_z_cal.py ~/klipper/klippy/extras/
 
 Or clone this repo and copy:
 ```bash
-git clone https://github.com/YOUR_USER/ender3-v3se-strain-gauge-klipper.git
+git clone https://github.com/elisaul77/ender3-v3se-strain-gauge-klipper.git
 cp ender3-v3se-strain-gauge-klipper/strain_gauge_z_cal.py ~/klipper/klippy/extras/
 ```
 
