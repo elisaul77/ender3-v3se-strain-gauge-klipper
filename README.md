@@ -1,7 +1,7 @@
-# Ender 3 V3 SE — HX711 Strain Gauge Z Offset Patch for Klipper
+# Ender 3 V3 SE — HX711 Strain Gauge + Display + PLR for Klipper
 
 <p align="center">
-  <b>Use the built-in HX711 pressure sensor on your Ender 3 V3 SE to auto-calibrate Z offset — without breaking G28, bed mesh, or your CR Touch.</b>
+  <b>Full Klipper setup for the Ender 3 V3 SE: strain gauge Z calibration, working stock display, and Power Loss Recovery — all coexisting.</b>
 </p>
 
 <p align="center">
@@ -10,6 +10,19 @@
   <img src="https://img.shields.io/badge/License-GPLv3-orange" />
   <img src="https://img.shields.io/badge/Status-Tested-brightgreen" />
 </p>
+
+---
+
+## What This Repo Covers
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| HX711 strain gauge Z calibration | ✅ Working | Coexists with CR Touch |
+| Stock TJC display with Klipper | ✅ Working | Requires custom MCU firmware |
+| Display language (English) | ✅ Working | `language: 6` for this firmware |
+| Z height on print screen | ✅ Working | Shows current Z while printing |
+| Temperature graph | ✅ Working | Accessible from Tune menu |
+| Power Loss Recovery (PLR) | ✅ Working | Auto-saves every 30 seconds |
 
 ---
 
@@ -381,12 +394,84 @@ Source: [CrealityOfficial/Ender-3V3-SE](https://github.com/CrealityOfficial/Ende
 
 ---
 
+---
+
+## Display Integration (Stock TJC Screen)
+
+The Ender 3 V3 SE display is a **TJC3224_011N** (240×320px, no touch) connected to the
+MCU via USART2. Klipper ignores it by default — this repo includes everything needed to
+bring it back to life alongside the strain gauge.
+
+### Files
+
+| File | Location on Pi | Purpose |
+|------|---------------|---------|
+| `klipper_patches/src/serial_bridge.c` | `~/klipper/src/` | Host serial bridge handler |
+| `klipper_patches/src/dirzctl.c` | `~/klipper/src/` | Direction control |
+| `klipper_patches/src/stm32/serial_bridge.c` | `~/klipper/src/stm32/` | STM32 USART2 implementation |
+| `klipper_patches/src/stm32/serial_bridge.h` | `~/klipper/src/stm32/` | Bridge declarations |
+| `klippy_extras/e3v3se_display.py` | `~/klipper/klippy/extras/` | Main display plugin |
+| `klippy_extras/tjc_display.py` | `~/klipper/klippy/extras/` | TJC display primitives |
+| `klippy_extras/serial_bridge.py` | `~/klipper/klippy/extras/` | Serial bridge host driver |
+
+See [`klipper_patches/INSTALL.md`](klipper_patches/INSTALL.md) for the full build instructions.
+
+### printer.cfg additions
+
+```ini
+[e3v3se_display]
+language: 6       # English = library 6 on this firmware (NOT 4 as upstream expects)
+logging: False
+
+[force_move]      # Required for SET_KINEMATIC_POSITION (used by PLR)
+```
+
+> ⚠️ **`language: 6`** — The stock Creality firmware on this printer has its icon
+> libraries at different positions than the plugin default (`4`). Library `6` = English.
+> If your display shows Chinese, test values 1–9 using the built-in `ICON_FINDER` tool.
+
+---
+
+## Power Loss Recovery (PLR)
+
+Automatically saves print state every 30 seconds. If power is cut, run `PLR_RESUME`
+after reboot to continue exactly where you left off — **without re-homing Z** (which
+would crash into the already-printed part).
+
+### How it works
+
+- `PLR_SAVE_TIMER` runs a self-sustaining loop every 30s from Klipper startup
+- Saves: filename, byte position in G-code, Z height, temperatures, fan, speed
+- On resume: homes only X/Y, tells Klipper the Z position via `SET_KINEMATIC_POSITION`
+- Resumes file from exact byte position using `M23` + `M26` + `M24`
+
+### printer.cfg addition
+
+```ini
+[save_variables]
+filename: ~/printer_2_data/config/variables.cfg
+```
+
+### Usage
+
+After a power cut, once Klipper is ready:
+
+```gcode
+PLR_RESUME
+```
+
+The macros are in [`config/macro.cfg`](config/macro.cfg) — look for the
+`# POWER LOSS RECOVERY (PLR)` section.
+
+---
+
 ## License
 
 GNU GPLv3 — matching Klipper's license.
 
 ## Credits
 
+- Display plugin based on [jpcurti/ender3-v3-se-klipper-with-display](https://github.com/jpcurti/ender3-v3-se-klipper-with-display)
 - Pin mapping from [CrealityOfficial/Ender-3V3-SE](https://github.com/CrealityOfficial/Ender-3V3-SE) Marlin source
 - Built on [Klipper3D](https://www.klipper3d.org/) HX711/load_cell infrastructure
 - Developed and tested on Raspberry Pi 4 + Fluidd
