@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Ender 3 V3 SE — Strain Gauge × Klipper: Auto Z Offset, Stock Display and Power Loss Recovery. Conceptual illustration." width="100%" />
+</p>
+
 # Ender 3 V3 SE — HX711 Strain Gauge + Display + PLR for Klipper
 
 <p align="center">
